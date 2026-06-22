@@ -1,7 +1,7 @@
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 import enum
-from base import Base
+from .base import Base
 
 class UserRole(enum.Enum):
     customer = "customer"
@@ -13,6 +13,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(30))
+    password: Mapped[str] = mapped_column(String(20))
     email: Mapped[str] = mapped_column(String(50))
     role: Mapped[UserRole] = mapped_column()
 

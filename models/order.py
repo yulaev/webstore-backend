@@ -1,7 +1,7 @@
 from sqlalchemy import Date, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from datetime import date
-from base import Base
+from .base import Base
 
 class OrderItem(Base):
     __tablename__ = "order_items"
