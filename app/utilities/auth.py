@@ -1,20 +1,22 @@
 from typing import Annotated
 from datetime import datetime, timedelta, timezone
-
 from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 import bcrypt
 import jwt
 import os
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from app.models import UserRole
+from jwt.exceptions import InvalidTokenError
 
 load_dotenv()
 
 HASHING_ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 SECRET_KEY = os.getenv("SECRET_KEY")
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/sign-in")
 
 
 class Token(BaseModel):
@@ -45,7 +47,20 @@ def create_access_token(data: dict, expires_delta: timedelta):
     return encoded_jwt
 
 
-def get_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], user):
+def get_access_token(user):
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": user.name, "role": user.role}, expires_delta=access_token_expires)
     return Token(access_token=access_token, token_type="bearer")
+
+def validate_token(token: Annotated[str, Depends(oauth2_scheme)]):
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[HASHING_ALGORITHM])
+        return payload
+    except InvalidTokenError:
+        raise credentials_exception
+    

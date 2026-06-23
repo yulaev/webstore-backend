@@ -1,7 +1,7 @@
 from app.database import get_session
-from app.schemas import UserCreate
+from app.schemas import UserCreate, UserEdit
 from app.models import User, UserRole
-from app.utilities import get_access_token, authenticate_user
+from app.utilities import oauth2_scheme, get_access_token, authenticate_user, validate_token
 from fastapi import HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 import bcrypt
@@ -33,7 +33,24 @@ def sing_in(data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     with get_session() as session:
         stmt = select(User).where(User.name == data.username)
         user = session.scalar(stmt)
-        if authenticate_user(data, user) == False:
+        if not authenticate_user(data, user):
             raise HTTPException(status_code=401, detail="Invalid username or password")
-        token = get_access_token(data, user)
+        
+        token = get_access_token(user)
         return token
+    
+def edit_user(token: Annotated[str, Depends(oauth2_scheme)], edit_body: UserEdit, id: int):
+    with get_session() as session:
+        payload = validate_token(token=token)
+        user = session.get(User, id)
+        print(payload.get("sub"))
+        print(user.name)
+        if payload.get("sub") != user.name:
+            raise HTTPException(status_code=403, detail="You are forbidden from performing this operation")
+        
+        edit_user = edit_body.model_dump(exclude_unset=True)
+        for key, value, in edit_user.items():
+            setattr(user, key, value)
+
+        session.commit()
+

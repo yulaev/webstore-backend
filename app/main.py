@@ -4,6 +4,4 @@ from .routers import users_router
 
 app = FastAPI()
 
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="get-token")
-
 app.include_router(users_router)

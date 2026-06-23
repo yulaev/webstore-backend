@@ -1,1 +1,1 @@
-from .user_schemas import UserCreate, UserPublic, UserPrivate
+from .user_schemas import UserCreate, UserEdit
