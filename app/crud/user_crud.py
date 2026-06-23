@@ -1,14 +1,17 @@
 from database import get_session
-from schemas import UserModel, SignInModel
+from schemas import UserCreate
 from models import User, UserRole
-from fastapi import HTTPException
+from utilities import get_access_token, authenticate_user
+from fastapi import HTTPException, Depends
+from fastapi.security import OAuth2PasswordRequestForm
 import bcrypt
+from typing import Annotated
 
 
-def sign_up(data: UserModel):
+def sign_up(data: UserCreate):
     with get_session() as session:
         if data.role == UserRole.admin:
-            raise HTTPException(status_code=403)
+            raise HTTPException(status_code=403, detail="You are Forbidden from performing this operation")
 
         s = bcrypt.gensalt()
         pw = data.password.encode("utf-8")
@@ -26,10 +29,9 @@ def sign_up(data: UserModel):
 
         return user
     
-def sing_in(data: SignInModel):
+def sing_in(data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     with get_session() as session:
-        user = session.get(User, data.name)
-        if bcrypt.checkpw(data.password, user.password_hash):
-            return True
-        else:
-            return False
+        user = session.get(User, data.username)
+        if not authenticate_user:
+            HTTPException(status_code=401, detail="Invalid username or password")
+        get_access_token(data, user)

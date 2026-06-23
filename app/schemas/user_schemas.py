@@ -1,12 +1,16 @@
 from pydantic import BaseModel
 from models import UserRole
 
-class UserModel(BaseModel):
+class UserCreate(BaseModel):
     name: str
     password: str
     email: str
     role: UserRole.customer
 
-class SignInModel(BaseModel):
+class UserPublic(BaseModel):
     name: str
-    password: str
+    email: str
+    role: UserRole
+
+class UserPrivate(UserPublic):
+    password_hash: str
