@@ -2,7 +2,6 @@ from database import get_session
 from schemas import UserModel, SignInModel
 from models import User, UserRole
 from fastapi import HTTPException
-from sqlalchemy import select
 import bcrypt
 
 
