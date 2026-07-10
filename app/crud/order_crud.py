@@ -1,5 +1,5 @@
 from app.database import get_session
-from app.models import Product, User, Order, OrderItem, OrderStatus
+from app.models import Product, User, Order, OrderItem, OrderStatus, UserRole
 from app.schemas import AddToCartBody
 from app.utilities import oauth2_scheme, validate_token
 from fastapi import Depends, HTTPException
@@ -10,7 +10,7 @@ def add_to_cart(token: Annotated[str, Depends(oauth2_scheme)], item_data: AddToC
     with get_session() as session:
         payload = validate_token(token)
         if payload.get("role") != "customer":
-            raise HTTPException(status_code=403, detail="You are forbidden from performing this operation")
+            raise HTTPException(status_code=403, detail="User forbidden from performing this operation")
         
         u_stmt = select(User).where(User.name == payload.get("sub"))
         user = session.scalar(u_stmt)
@@ -50,7 +50,7 @@ def remove_from_cart(token: Annotated[str, Depends(oauth2_scheme)], id: int):
     with get_session() as session:
         payload = validate_token(token)
         if payload.get("role") != "customer":
-            raise HTTPException(status_code=403, detail="You are forbidden from performing this operation")
+            raise HTTPException(status_code=403, detail="User forbidden from performing this operation")
         
         u_stmt = select(User).where(User.name == payload.get("sub"))
         user = session.scalar(u_stmt)
@@ -68,7 +68,7 @@ def remove_from_cart(token: Annotated[str, Depends(oauth2_scheme)], id: int):
         
         user_check = session.get(User, order.customer_id)
         if user.id != user_check.id:
-            raise HTTPException(status_code=403, detail="You are forbidden from performing this operation")
+            raise HTTPException(status_code=403, detail="User forbidden from performing this operation")
         
         session.delete(order_item)
         session.commit()
@@ -98,6 +98,7 @@ def update_order_status(cart: list[OrderItem]):
     status = min(cart, key=lambda item: item.status.priority).status
     return status
     
+# Customer specific action
 def place_order(token: Annotated[str, Depends(oauth2_scheme)]):
     with get_session() as session:
         payload = validate_token(token)
@@ -127,5 +128,45 @@ def place_order(token: Annotated[str, Depends(oauth2_scheme)]):
             item.status = OrderStatus.ordered
             session.commit()
 
+        order.status = update_order_status(cart)
+        session.commit()
+
+#Seller specific action
+def ship_item(token: Annotated[str, Depends(oauth2_scheme)], id):
+    with get_session() as session:
+        payload = validate_token(token)
+
+        u_stmt = select(User).where(User.name == payload.get("sub"))
+        user = session.scalar(u_stmt)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        if user.role != UserRole.seller:
+            raise HTTPException(status_code=403, detail="User forbidden from performing this operation")
+        
+        i_stmt = select(OrderItem).where(OrderItem.id == id)
+        item = session.scalar(i_stmt)
+        if not item:
+            raise HTTPException(status_code=404, detail="Item not found")
+        if item.status != OrderStatus.ordered:
+            raise HTTPException(status_code=403, detail="User forbidden from performing this operation")
+        
+        o_stmt = select(Order).where(Order.id == item.order_id)
+        order = session.scalar(o_stmt)
+        if not order:
+            raise HTTPException(status_code=404, detail="Order not found")
+
+        p_stmt = select(Product).where(Product.id == item.product_id)
+        product = session.scalar(p_stmt)
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        
+        if product.seller_id != user.id:
+            raise HTTPException(status_code=403, detail="User forbidden from performing this operation")
+        
+        item.status = OrderStatus.shipped
+
+        c_stmt = select(OrderItem).where(OrderItem.order_id ==  order.id)
+        cart = session.scalars(c_stmt).all()
+        
         order.status = update_order_status(cart)
         session.commit()
