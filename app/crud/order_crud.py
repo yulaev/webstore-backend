@@ -132,7 +132,7 @@ def place_order(token: Annotated[str, Depends(oauth2_scheme)]):
         session.commit()
 
 #Seller specific action
-def ship_item(token: Annotated[str, Depends(oauth2_scheme)], id):
+def mark_as_shipped(token: Annotated[str, Depends(oauth2_scheme)], id):
     with get_session() as session:
         payload = validate_token(token)
 
@@ -170,3 +170,4 @@ def ship_item(token: Annotated[str, Depends(oauth2_scheme)], id):
         
         order.status = update_order_status(cart)
         session.commit()
+
