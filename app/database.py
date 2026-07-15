@@ -1,16 +1,19 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
-from app.models import Base
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from contextlib import contextmanager
 
 load_dotenv()
 
 url = os.getenv("DATABASE_URL")
 engine = create_engine(url)
+SessionLocal = sessionmaker(bind=engine)
 
-def db_init():
-    Base.metadata.create_all(engine)
-
+@contextmanager
 def get_session():
-    return Session(engine)
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
