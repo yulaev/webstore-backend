@@ -7,13 +7,11 @@ from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
 
-from app.database import get_session
 from app.schemas import UserCreate, UserEdit, UserPublic
 from app.models import User, UserRole
 from app.utilities import oauth2_scheme, get_access_token, authenticate_user, validate_token
 
 load_dotenv()
-BCRYPT_ROUNDS = os.getenv("BCRYPT_ROUNDS")
 
 def sign_up(data: UserCreate, session: Session):
     if data.role == UserRole.admin:
@@ -23,6 +21,8 @@ def sign_up(data: UserCreate, session: Session):
     check_user = session.scalar(stmt)
     if check_user:
         raise HTTPException(status_code=403, detail="User already exists")
+    
+    BCRYPT_ROUNDS = os.getenv("BCRYPT_ROUNDS")
 
     s = bcrypt.gensalt(rounds=int(BCRYPT_ROUNDS))
     pw = data.password.encode("utf-8")
