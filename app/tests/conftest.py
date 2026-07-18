@@ -62,10 +62,12 @@ def set_bcrypt_rounds(monkeypatch):
 
 @pytest.fixture()
 def set_up_get_token(client):
-    user_data = {"name": "foo", "password": "1234", "email": "foobar@gmail.com", "role": "customer"}
-    client.post("users/sign-up", json=user_data)
+    def _set_up(name, password, email, role):
+        user_data = {"name": name, "password": password, "email": email, "role": role}
+        client.post("users/sign-up", json=user_data)
 
-    auth_data = {"username": "foo", "password": "1234"}
-    body = client.post("users/sign-in", data=auth_data)
-    token_json = body.json()
-    return token_json["access_token"]
+        auth_data = {"username": name, "password": password}
+        body = client.post("users/sign-in", data=auth_data)
+        token_json = body.json()
+        return token_json["access_token"]
+    return _set_up
